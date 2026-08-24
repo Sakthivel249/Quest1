@@ -100,6 +100,12 @@ def _download_video(url: str) -> str:
         "extractor_args": {"youtube": {"player_client": ["android", "web"]}}
     }
 
+    # If running in Google Colab, YouTube aggressively blocks downloads. 
+    # Enable OAuth2 so the user can securely authenticate their session in the notebook.
+    if "COLAB_RELEASE_TAG" in os.environ or "COLAB_GPU" in os.environ:
+        logger.info("Google Colab detected. Enabling YouTube OAuth2 to bypass bot blocks...")
+        opts["username"] = "oauth2"
+
     # Point yt-dlp to ffmpeg explicitly — needed when PATH hasn't been refreshed
     # (e.g. ffmpeg just installed via winget in the same terminal session)
     import shutil

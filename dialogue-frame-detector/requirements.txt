@@ -1,0 +1,19 @@
+# Core video handling
+opencv-python>=4.8.0
+yt-dlp>=2024.1.0
+numpy>=1.24.0
+
+# OCR
+easyocr>=1.7.0
+
+# Fuzzy text matching
+rapidfuzz>=3.5.0
+
+# Image utilities
+Pillow>=10.0.0
+
+# System dependency (not pip-installable):
+# ffmpeg must be installed separately — required by yt-dlp to merge video+audio tracks
+# Windows: winget install --id Gyan.FFmpeg -e
+# macOS:   brew install ffmpeg
+# Linux:   sudo apt install ffmpeg

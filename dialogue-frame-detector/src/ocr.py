@@ -55,8 +55,8 @@ class VisualSearcher:
             logger.info("Video loaded. Starting Phase 1: Coarse Search...")
             
             # --- PHASE 1: COARSE SEARCH ---
-            # Check 1 frame every second
-            coarse_indices = get_coarse_sample_indices(v.meta, interval_seconds=1.0)
+            # Check 1 frame every 2 seconds to drastically reduce CPU load
+            coarse_indices = get_coarse_sample_indices(v.meta, interval_seconds=2.0)
             
             match_found = False
             coarse_match_ts = 0.0

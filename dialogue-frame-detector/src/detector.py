@@ -71,21 +71,35 @@ class DialogueDetector:
             return None
 
         if self.mode == "auto":
-            # Run both in parallel
-            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-                # Submit both tasks
-                future_audio = executor.submit(run_audio)
-                future_visual = executor.submit(run_visual)
-                
-                # Wait for whichever finishes first with a non-None result
-                for future in concurrent.futures.as_completed([future_audio, future_visual]):
-                    res = future.result()
-                    if res is not None:
-                        result_frame_idx = res
-                        stop_event.set() # Stop the other thread
-                        break
-                        
-                # If neither succeeded
+            import torch
+            has_gpu = torch.cuda.is_available() or (hasattr(torch.backends, "mps") and torch.backends.mps.is_available())
+            
+            if has_gpu:
+                logger.info("GPU detected! Running Audio and Visual searches in parallel.")
+                # Run both in parallel
+                with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+                    # Submit both tasks
+                    future_audio = executor.submit(run_audio)
+                    future_visual = executor.submit(run_visual)
+                    
+                    # Wait for whichever finishes first with a non-None result
+                    for future in concurrent.futures.as_completed([future_audio, future_visual]):
+                        res = future.result()
+                        if res is not None:
+                            result_frame_idx = res
+                            stop_event.set() # Stop the other thread
+                            break
+                            
+                    # If neither succeeded
+                    if result_frame_idx is None:
+                        logger.error("❌ Both Audio and Visual searches failed.")
+            else:
+                logger.info("CPU only detected. Running sequentially to prevent thread contention...")
+                # Run sequentially so PyTorch doesn't crash your CPU
+                result_frame_idx = run_audio()
+                if result_frame_idx is None:
+                    logger.info("Audio search didn't find it. Falling back to Visual search...")
+                    result_frame_idx = run_visual()
                 if result_frame_idx is None:
                     logger.error("❌ Both Audio and Visual searches failed.")
                     

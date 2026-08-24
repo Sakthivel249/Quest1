@@ -96,6 +96,8 @@ def _download_video(url: str) -> str:
         "fragment_retries": 10,
         "socket_timeout": 30,
         "nocheckcertificate": True,
+        # Bypass YouTube's bot block on Cloud Servers (Colab/AWS) by forcing Android/Web client
+        "extractor_args": {"youtube": {"player_client": ["android", "web"]}}
     }
 
     # Point yt-dlp to ffmpeg explicitly — needed when PATH hasn't been refreshed

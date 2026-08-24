@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 warnings.filterwarnings("ignore", category=UserWarning, module="whisper")
 
 class AudioSearcher:
-    def __init__(self, model_name: str = "base"):
+    def __init__(self, model_name: str = "tiny"):
         """
         """
         import os

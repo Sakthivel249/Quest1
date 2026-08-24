@@ -86,8 +86,8 @@ def _download_video(url: str) -> str:
 
     opts = {
         # bestvideo+bestaudio: ffmpeg merges separate video+audio tracks (best quality)
-        # /best: fallback to single combined stream if separate tracks unavailable
-        "format": "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best",
+        # Cap height at 720p to dramatically speed up download and cv2 decoding times
+        "format": "bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720]/best",
         "outtmpl": outtmpl,
         "quiet": False,
         "no_warnings": True,

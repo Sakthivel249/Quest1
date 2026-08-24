@@ -42,6 +42,9 @@ class DialogueDetector:
         Finds the dialogue based on the selected mode.
         Returns the frame_index.
         """
+        import threading
+        import concurrent.futures
+
         logger.info("=== Starting Dialogue Detection ===")
         logger.info("Target: '%s'", target_dialogue)
         logger.info("Mode: %s", self.mode)
@@ -49,30 +52,51 @@ class DialogueDetector:
         local_path = v._temp_path if v._temp_path else v._url
         meta = v.meta
         
-        # --- AUDIO SEARCH ---
-        if self.mode in ("audio", "auto"):
-            audio_ts = self._get_audio_searcher().find_dialogue_timestamp(local_path, target_dialogue)
+        stop_event = threading.Event()
+        result_frame_idx = None
+        
+        def run_audio():
+            audio_ts = self._get_audio_searcher().find_dialogue_timestamp(local_path, target_dialogue, stop_event)
             if audio_ts is not None:
-                # Found it via audio! Convert timestamp to frame index
                 frame_idx = meta.ts_to_frame(audio_ts)
                 logger.info("🎉 Audio Search Succeeded. Frame index: %d", frame_idx)
                 return frame_idx
-            else:
-                if self.mode == "auto":
-                    logger.info("Audio search didn't find it. Falling back to Visual search...")
-                else:
-                    logger.error("Audio search failed.")
-                    return None
+            return None
 
-        # --- VISUAL SEARCH ---
-        if self.mode in ("visual", "auto"):
-            # We can use the already downloaded local_path to save time
-            frame_idx = self._get_visual_searcher().find_dialogue_frame(local_path, target_dialogue)
+        def run_visual():
+            frame_idx = self._get_visual_searcher().find_dialogue_frame(local_path, target_dialogue, stop_event)
             if frame_idx is not None:
                 logger.info("🎉 Visual Search Succeeded. Frame index: %d", frame_idx)
                 return frame_idx
-            else:
-                logger.error("Visual search failed.")
-                return None
+            return None
+
+        if self.mode == "auto":
+            # Run both in parallel
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+                # Submit both tasks
+                future_audio = executor.submit(run_audio)
+                future_visual = executor.submit(run_visual)
                 
-        return None
+                # Wait for whichever finishes first with a non-None result
+                for future in concurrent.futures.as_completed([future_audio, future_visual]):
+                    res = future.result()
+                    if res is not None:
+                        result_frame_idx = res
+                        stop_event.set() # Stop the other thread
+                        break
+                        
+                # If neither succeeded
+                if result_frame_idx is None:
+                    logger.error("❌ Both Audio and Visual searches failed.")
+                    
+        elif self.mode == "audio":
+            result_frame_idx = run_audio()
+            if result_frame_idx is None:
+                logger.error("❌ Audio search failed.")
+                
+        elif self.mode == "visual":
+            result_frame_idx = run_visual()
+            if result_frame_idx is None:
+                logger.error("❌ Visual search failed.")
+
+        return result_frame_idx

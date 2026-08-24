@@ -42,7 +42,7 @@ class VisualSearcher:
         extracted_text = " ".join([result[1] for result in results])
         return extracted_text
 
-    def find_dialogue_frame(self, url: str, target_dialogue: str) -> Optional[int]:
+    def find_dialogue_frame(self, url: str, target_dialogue: str, stop_event=None) -> Optional[int]:
         """
         Find the exact frame index where the target dialogue appears.
         Uses the Coarse-to-Fine strategy.
@@ -62,6 +62,10 @@ class VisualSearcher:
             coarse_match_ts = 0.0
             
             for idx in coarse_indices:
+                if stop_event and stop_event.is_set():
+                    logger.info("Visual search aborted by early exit signal.")
+                    return None
+                    
                 frame = v.get_frame(idx)
                 text = self._extract_text_from_frame(frame)
                 
@@ -89,6 +93,10 @@ class VisualSearcher:
             # We want the *very first* frame where the text appears, 
             # so we check sequentially from earliest to latest.
             for idx in fine_indices:
+                if stop_event and stop_event.is_set():
+                    logger.info("Visual search aborted by early exit signal.")
+                    return None
+                    
                 frame = v.get_frame(idx)
                 text = self._extract_text_from_frame(frame)
                 

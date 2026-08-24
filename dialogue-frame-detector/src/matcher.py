@@ -35,6 +35,11 @@ def is_match(extracted_text: str, target_dialogue: str, threshold: float = 80.0)
     if not clean_extracted or not clean_target:
         return False
         
+    # Prevent false positives where extracted text is just a single letter (e.g. "m")
+    # and partial_ratio finds that letter inside the target string and gives 100%
+    if len(clean_extracted) < len(clean_target) * 0.5:
+        return False
+        
     # partial_ratio checks if the target dialogue is a substring of the extracted text
     # (since the extracted text might contain a whole sentence, but we only search for a phrase)
     score = fuzz.partial_ratio(clean_target, clean_extracted)

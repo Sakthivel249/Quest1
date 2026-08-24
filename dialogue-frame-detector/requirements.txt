@@ -12,6 +12,9 @@ rapidfuzz>=3.5.0
 # Image utilities
 Pillow>=10.0.0
 
+# Audio Search (ASR)
+openai-whisper>=20231117
+
 # System dependency (not pip-installable):
 # ffmpeg must be installed separately — required by yt-dlp to merge video+audio tracks
 # Windows: winget install --id Gyan.FFmpeg -e

@@ -44,13 +44,29 @@ class AudioSearcher:
         if stop_event and stop_event.is_set():
             return None
 
-        logger.info("Transcribing audio (this may take a moment)...")
-        # Whisper automatically extracts the audio from the video file
-        try:
-            result = self.model.transcribe(video_path, word_timestamps=True)
-        except Exception as e:
-            logger.error("Whisper transcription failed: %s", e)
-            return None
+        import os
+        import json
+        
+        cache_dir = os.path.dirname(video_path)
+        url_hash = os.path.splitext(os.path.basename(video_path))[0]
+        transcript_cache_path = os.path.join(cache_dir, f"{url_hash}_whisper.json")
+        
+        result = None
+        if os.path.exists(transcript_cache_path):
+            logger.info("⚡ Found cached Whisper transcription! Skipping heavy AI processing.")
+            with open(transcript_cache_path, 'r', encoding='utf-8') as f:
+                result = json.load(f)
+        else:
+            logger.info("Transcribing audio (this may take a moment)...")
+            # Whisper automatically extracts the audio from the video file
+            try:
+                result = self.model.transcribe(video_path, word_timestamps=True)
+                # Save to cache so future searches on this video are instant
+                with open(transcript_cache_path, 'w', encoding='utf-8') as f:
+                    json.dump(result, f)
+            except Exception as e:
+                logger.error("Whisper transcription failed: %s", e)
+                return None
             
         if stop_event and stop_event.is_set():
             return None

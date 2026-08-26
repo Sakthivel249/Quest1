@@ -24,8 +24,8 @@ class VisualSearcher:
         Using English ('en') by default. GPU is used automatically if available.
         """
         logger.info("Initializing EasyOCR (this may take a moment on first run)...")
-        # Initialize Reader (downloads model weights on first run)
-        self.reader = easyocr.Reader(['en'], gpu=True)
+        # Initialize Reader with English and Tamil support
+        self.reader = easyocr.Reader(['en', 'ta'], gpu=True)
         logger.info("EasyOCR initialized successfully.")
 
     def _extract_text_from_frame(self, frame: np.ndarray) -> str:

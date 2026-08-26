@@ -1,0 +1,94 @@
+PROJECT PROMPT HISTORY: DIALOGUE-TO-FRAME DETECTOR
+==================================================
+
+This document outlines the architectural milestones and engineering prompts that drove the development of the Dialogue-to-Frame Detector.
+
+
+PHASE 1: CORE ARCHITECTURE
+--------------------------
+Prompt:
+"Design an AI pipeline that can ingest a video file and pinpoint the exact frame where a specific dialogue or phrase is spoken."
+
+Result:
+Built the initial Whisper Audio Search pipeline to transcribe speech and extract timestamps.
+
+
+PHASE 2: DYNAMIC INGESTION
+--------------------------
+Prompt:
+"Expand the system's capabilities to dynamically download and process YouTube streams, rather than relying solely on local video files."
+
+Result:
+Integrated yt-dlp to stream and parse YouTube content on the fly.
+
+
+PHASE 3: PERFORMANCE & CONCURRENCY
+----------------------------------
+Prompt:
+"Optimize the pipeline for maximum speed by implementing multithreading. Run the Audio and Visual search engines concurrently, and instantly abort the slower thread as soon as a match is found."
+
+Result:
+Refactored the architecture to use ThreadPoolExecutor and threading.Event, allowing parallel execution and immediate thread cancellation upon success.
+
+
+PHASE 4: REGIONAL LANGUAGE FALLBACKS
+------------------------------------
+Prompt:
+"Implement a visual fallback mechanism. If the audio transcriber struggles with regional languages (e.g., transcribing Tamil audio into native script when the query is in Tanglish Latin script), the system should seamlessly fallback to scanning the on-screen lyrics using OCR."
+
+Result:
+Engineered the Visual OCR (EasyOCR) fallback pipeline to scan 1 frame every 2 seconds when audio transcription yields no match.
+
+
+PHASE 5: HIGH-PRECISION ALIGNMENT
+---------------------------------
+Prompt:
+"Improve the precision of the timestamp matching algorithm. Ensure the exact frame corresponds to the actual spoken word, correcting any offset delays."
+
+Result:
+Replaced basic string-matching with a sliding-window rapidfuzz search over Whisper's word-level timestamps to guarantee millisecond-accurate frame alignment.
+
+
+PHASE 6: HARDWARE-AWARE EXECUTION
+---------------------------------
+Prompt:
+"Implement hardware-aware execution logic. If the system detects a CPU-only environment, disable multithreading to prevent PyTorch thread-thrashing, switch to efficient models, and run searches sequentially. Retain parallel execution only for GPU environments."
+
+Result:
+Added CUDA/MPS detection logic to dynamically scale execution strategy based on available hardware, alongside downgrading Whisper to the fast 'tiny' model on CPUs.
+
+
+PHASE 7: USER INTERFACE DEVELOPMENT
+-----------------------------------
+Prompt:
+"Develop a web-based user interface using Gradio, allowing users to easily input YouTube URLs and target dialogues, and view the resulting extracted frame directly in their browser."
+
+Result:
+Designed and built app.py, providing a sleek, modern frontend for the backend pipeline.
+
+
+PHASE 8: CLOUD DEPLOYMENT RESILIENCE
+------------------------------------
+Prompt:
+"Enhance the downloader's resilience against aggressive cloud-IP bot blockers (such as those encountered on Google Colab) to ensure reliable deployments."
+
+Result:
+Added environment detection to automatically inject Mobile/Web client spoofing and OAuth2 device-login to safely bypass bot-blockers.
+
+
+PHASE 9: PERSISTENT DATABASE & HISTORY TRACKING
+-----------------------------------------------
+Prompt:
+"If finished searching, I need to clear inputs and add a database to store these, and have a history section as well."
+
+Result:
+Built a lightweight SQLite backend (db.py) to automatically log successful searches and integrated a Dataframe History tab directly into the UI.
+
+
+PHASE 10: AI CACHING LAYER
+--------------------------
+Prompt:
+"Need to cache the things if the video is the same, so it doesn't process again."
+
+Result:
+Engineered an MD5-hashed caching layer that locally saves both the raw downloaded MP4s and the heavy JSON Whisper transcriptions, dropping repeat search times from minutes to milliseconds.

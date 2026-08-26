@@ -72,17 +72,27 @@ class VideoMeta:
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+import hashlib
+
 def _download_video(url: str) -> str:
     """
-    Download the video at url to a temporary directory using yt-dlp.
+    Download the video at url to a persistent cache directory using yt-dlp.
+    If the video has been downloaded previously, instantly load it from cache.
     Returns the local file path of the downloaded video.
-    Raises RuntimeError if download fails.
-
-    yt-dlp handles 1800+ platforms automatically:
-    YouTube, Vimeo, ok.ru, Twitter, Reddit, Dailymotion, etc.
     """
-    tmp_dir = tempfile.mkdtemp(prefix="vreader_")
-    outtmpl = os.path.join(tmp_dir, "video.%(ext)s")
+    cache_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "cache")
+    os.makedirs(cache_dir, exist_ok=True)
+    
+    url_hash = hashlib.md5(url.encode('utf-8')).hexdigest()
+    
+    # Check cache first
+    cached_files = glob.glob(os.path.join(cache_dir, f"{url_hash}.*"))
+    if cached_files:
+        path = cached_files[0]
+        logger.info("Video found in cache! Skipping download: %s", path)
+        return path
+        
+    outtmpl = os.path.join(cache_dir, f"{url_hash}.%(ext)s")
 
     opts = {
         # bestvideo+bestaudio: ffmpeg merges separate video+audio tracks (best quality)
@@ -122,14 +132,14 @@ def _download_video(url: str) -> str:
     else:
         logger.warning("ffmpeg not found — audio/video merging may fail.")
 
-    logger.info("Downloading: %s -> %s", url, tmp_dir)
+    logger.info("Downloading: %s -> %s", url, cache_dir)
     with yt_dlp.YoutubeDL(opts) as ydl:
         ydl.download([url])
 
     # Find the downloaded file (yt-dlp picks the extension)
-    files = glob.glob(os.path.join(tmp_dir, "video.*"))
+    files = glob.glob(os.path.join(cache_dir, f"{url_hash}.*"))
     if not files:
-        raise RuntimeError(f"yt-dlp produced no file in {tmp_dir}")
+        raise RuntimeError(f"yt-dlp produced no file in {cache_dir}")
 
     path = files[0]
     size_mb = os.path.getsize(path) / (1024 * 1024)
@@ -229,12 +239,9 @@ class VideoReader:
     # ------------------------------------------------------------------
 
     def release(self) -> None:
-        """Release VideoCapture and delete any downloaded temp file."""
+        """Release VideoCapture. Cached files are kept persistently."""
         if self._cap and self._cap.isOpened():
             self._cap.release()
-        if self._temp_path and os.path.exists(self._temp_path):
-            os.remove(self._temp_path)
-            logger.info("Temp file deleted: %s", self._temp_path)
 
     def __enter__(self) -> "VideoReader":
         return self

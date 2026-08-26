@@ -21,8 +21,25 @@ def get_history_list():
     # format: url, dialogue, mode, timestamp, image_path, created_at
     return [[r[0], r[1], r[2], r[3], r[5]] for r in rows]
 
+import hashlib
+import shutil
+
 def process_video(url, local_video, dialogue, mode):
-    target_video = local_video if local_video else url
+    cache_dir = os.path.join(os.path.dirname(__file__), "cache")
+    os.makedirs(cache_dir, exist_ok=True)
+
+    if local_video:
+        # Hash the first 1MB of the uploaded video to create a persistent cache key
+        with open(local_video, "rb") as f:
+            file_hash = hashlib.md5(f.read(1024 * 1024)).hexdigest()
+        ext = os.path.splitext(local_video)[1]
+        target_video = os.path.join(cache_dir, f"upload_{file_hash}{ext}")
+        
+        # Copy the Gradio temp file to our persistent cache if it's not already there
+        if not os.path.exists(target_video):
+            shutil.copy2(local_video, target_video)
+    else:
+        target_video = url
     
     if not target_video or not dialogue:
         return None, "Please provide either a YouTube URL or upload a local video, along with the target dialogue.", url, local_video, dialogue, get_history_list()
@@ -53,8 +70,8 @@ def process_video(url, local_video, dialogue, mode):
                 save_search(display_url, dialogue, mode, frame_idx, timestamp_str, img_path)
                 
                 success_msg = f"✅ Match found at {timestamp_str} (Frame {frame_idx})"
-                # Return empty strings/None to clear inputs
-                return frame_rgb, success_msg, "", None, "", get_history_list()
+                # Return empty strings to clear text inputs, but retain the uploaded video so they don't have to re-upload
+                return frame_rgb, success_msg, "", local_video, "", get_history_list()
             else:
                 return None, "❌ Dialogue not found in the video.", url, local_video, dialogue, get_history_list()
     except Exception as e:
@@ -143,7 +160,7 @@ with gr.Blocks(title="Dialogue to Frame Extractor") as demo:
                     with gr.Column():
                         url_input = gr.Textbox(label="YouTube URL", placeholder="https://youtu.be/...", elem_classes="gr-box")
                         gr.Markdown("<p style='text-align: center; color: #a0aec0; margin: 5px 0;'>— OR —</p>")
-                        local_video_input = gr.Video(label="Upload Local Video", elem_classes="gr-box")
+                        local_video_input = gr.Video(label="Upload Local Video", sources=["upload"], elem_classes="gr-box")
                         dialogue_input = gr.Textbox(label="Target Dialogue", placeholder="Type the phrase to search for...", elem_classes="gr-box")
                         mode_input = gr.Radio(choices=["auto", "audio", "visual"], value="auto", label="Search Mode", elem_classes="gr-box")
                         search_button = gr.Button("Extract Frame", variant="primary")

@@ -1,13 +1,13 @@
 PROJECT PROMPT HISTORY: DIALOGUE-TO-FRAME DETECTOR
 ==================================================
 
-This document outlines the architectural milestones and engineering prompts that drove the development of the Dialogue-to-Frame Detector.
+This document outlines the architectural milestones and the original user prompts that drove the development of the Dialogue-to-Frame Detector.
 
 
 PHASE 1: CORE ARCHITECTURE
 --------------------------
 Prompt:
-"Design an AI pipeline that can ingest a video file and pinpoint the exact frame where a specific dialogue or phrase is spoken."
+"I want an AI tool where I can put in a video and search for a specific line of dialogue, and it will instantly find the exact frame where that phrase is spoken."
 
 Result:
 Built the initial Whisper Audio Search pipeline to transcribe speech and extract timestamps.
@@ -16,7 +16,7 @@ Built the initial Whisper Audio Search pipeline to transcribe speech and extract
 PHASE 2: DYNAMIC INGESTION
 --------------------------
 Prompt:
-"Expand the system's capabilities to dynamically download and process YouTube streams, rather than relying solely on local video files."
+"Can we make this work for YouTube videos? I'd like to just paste a YouTube link and have it automatically download and search the video instead of needing local files."
 
 Result:
 Integrated yt-dlp to stream and parse YouTube content on the fly.
@@ -25,7 +25,7 @@ Integrated yt-dlp to stream and parse YouTube content on the fly.
 PHASE 3: PERFORMANCE & CONCURRENCY
 ----------------------------------
 Prompt:
-"Optimize the pipeline for maximum speed by implementing multithreading. Run the Audio and Visual search engines concurrently, and instantly abort the slower thread as soon as a match is found."
+"The search is a bit slow right now. Is there a way to speed it up by running the audio and visual searches at the same time? If one finds a match, it should stop the other one immediately."
 
 Result:
 Refactored the architecture to use ThreadPoolExecutor and threading.Event, allowing parallel execution and immediate thread cancellation upon success.
@@ -34,7 +34,7 @@ Refactored the architecture to use ThreadPoolExecutor and threading.Event, allow
 PHASE 4: REGIONAL LANGUAGE FALLBACKS
 ------------------------------------
 Prompt:
-"Implement a visual fallback mechanism. If the audio transcriber struggles with regional languages (e.g., transcribing Tamil audio into native script when the query is in Tanglish Latin script), the system should seamlessly fallback to scanning the on-screen lyrics using OCR."
+"What happens with regional songs? Sometimes Whisper transcribes Tamil audio into native Tamil script, but I might search using English letters (Tanglish). Can we add a visual text scanner (OCR) as a fallback so it just reads the on-screen lyrics?"
 
 Result:
 Engineered the Visual OCR (EasyOCR) fallback pipeline to scan 1 frame every 2 seconds when audio transcription yields no match.
@@ -43,7 +43,7 @@ Engineered the Visual OCR (EasyOCR) fallback pipeline to scan 1 frame every 2 se
 PHASE 5: HIGH-PRECISION ALIGNMENT
 ---------------------------------
 Prompt:
-"Improve the precision of the timestamp matching algorithm. Ensure the exact frame corresponds to the actual spoken word, correcting any offset delays."
+"The timing isn't perfect—the exact line actually comes at 47 seconds, but the tool is telling me 41 seconds. How can we make the timestamp millisecond-accurate?"
 
 Result:
 Replaced basic string-matching with a sliding-window rapidfuzz search over Whisper's word-level timestamps to guarantee millisecond-accurate frame alignment.
@@ -52,7 +52,7 @@ Replaced basic string-matching with a sliding-window rapidfuzz search over Whisp
 PHASE 6: HARDWARE-AWARE EXECUTION
 ---------------------------------
 Prompt:
-"Implement hardware-aware execution logic. If the system detects a CPU-only environment, disable multithreading to prevent PyTorch thread-thrashing, switch to efficient models, and run searches sequentially. Retain parallel execution only for GPU environments."
+"I'm running this locally on my CPU and it's struggling. Can we add a fallback so that if a user doesn't have a GPU, it automatically switches to a lighter AI model and runs sequentially instead of freezing up?"
 
 Result:
 Added CUDA/MPS detection logic to dynamically scale execution strategy based on available hardware, alongside downgrading Whisper to the fast 'tiny' model on CPUs.
@@ -61,16 +61,16 @@ Added CUDA/MPS detection logic to dynamically scale execution strategy based on 
 PHASE 7: USER INTERFACE DEVELOPMENT
 -----------------------------------
 Prompt:
-"Develop a web-based user interface using Gradio, allowing users to easily input YouTube URLs and target dialogues, and view the resulting extracted frame directly in their browser."
+"Can we build a nice web UI for this using Gradio? I want to just type in a YouTube URL and my dialogue, and see the extracted frame pop up in my browser."
 
 Result:
-Designed and built app.py, providing a sleek, modern frontend for the backend pipeline.
+Designed and built app.py, providing a sleek, modern Glassmorphism frontend for the backend pipeline.
 
 
 PHASE 8: CLOUD DEPLOYMENT RESILIENCE
 ------------------------------------
 Prompt:
-"Enhance the downloader's resilience against aggressive cloud-IP bot blockers (such as those encountered on Google Colab) to ensure reliable deployments."
+"I tried running this on Google Colab, but YouTube keeps blocking the downloads because it thinks I'm a bot. How can we fix this so it downloads reliably on cloud servers?"
 
 Result:
 Added environment detection to automatically inject Mobile/Web client spoofing and OAuth2 device-login to safely bypass bot-blockers.
@@ -79,7 +79,7 @@ Added environment detection to automatically inject Mobile/Web client spoofing a
 PHASE 9: PERSISTENT DATABASE & HISTORY TRACKING
 -----------------------------------------------
 Prompt:
-"If finished searching, I need to clear inputs and add a database to store these, and have a history section as well."
+"After a search finishes, can the UI automatically clear the inputs so it's ready for the next one? Also, let's add a database to save all my successful searches and show them in a History tab."
 
 Result:
 Built a lightweight SQLite backend (db.py) to automatically log successful searches and integrated a Dataframe History tab directly into the UI.
@@ -88,7 +88,7 @@ Built a lightweight SQLite backend (db.py) to automatically log successful searc
 PHASE 10: AI CACHING LAYER
 --------------------------
 Prompt:
-"Need to cache the things if the video is the same, so it doesn't process again."
+"We need to cache the downloads and AI transcriptions. If I search the exact same video again for a different dialogue, it shouldn't have to download or run the heavy AI models all over again."
 
 Result:
 Engineered an MD5-hashed caching layer that locally saves both the raw downloaded MP4s and the heavy JSON Whisper transcriptions, dropping repeat search times from minutes to milliseconds.

@@ -7,7 +7,9 @@ A powerful AI-driven tool that finds the exact video frame where a specific dial
 - **Visual Search (EasyOCR)**: If audio fails (e.g. background text, different languages), it scans the video frames to find the text on-screen.
 - **Hardware-Aware Multithreading**: Automatically detects if you have a GPU. If so, it runs both Audio and Visual searches concurrently. If on CPU, it runs sequentially to prevent thread-thrashing.
 - **Bot-Block Bypass**: Employs Mobile/Web spoofing and OAuth2 to bypass YouTube download blocks.
-- **Web UI**: Includes a beautiful Gradio frontend!
+- **AI Caching Layer**: Downloads and heavy Whisper AI transcriptions are automatically MD5-hashed and cached, dropping repeat search times from minutes to milliseconds.
+- **Persistent History (SQLite)**: Successful searches and extracted frames are saved to a local database and viewable via the built-in UI History Tab.
+- **Web UI & Local Uploads**: Includes a beautiful Glassmorphism Gradio frontend that supports searching both YouTube URLs and Local Video uploads via drag-and-drop.
 
 ## Installation
 
